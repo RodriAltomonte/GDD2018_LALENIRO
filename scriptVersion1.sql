@@ -1,12 +1,76 @@
 
-use GD1C2018
-go
+USE [GD1C2018]
+GO
 
- /* creo esquema LALENIRO*/
- CREATE SCHEMA LALENIRO
- go
+
+-------------------------------DROP PROCEDURES-------------------
+------------------------------DROP TRIGGERS ---------------------------------
+------------------------------DROP DE TABLAS------------------------------
+IF OBJECT_ID('LALENIRO.Item_factura') IS NOT NULL
+DROP TABLE LALENIRO.Item_factura;
+GO
+IF OBJECT_ID('LALENIRO.Rol_has_funcionalidad') IS NOT NULL
+DROP TABLE LALENIRO.Rol_has_funcionalidad;
+GO
+IF OBJECT_ID('LALENIRO.Usuario_has_Rol') IS NOT NULL
+DROP TABLE LALENIRO.Usuario_has_Rol;
+GO
+IF OBJECT_ID('LALENIRO.Habitacion_has_Reserva') IS NOT NULL
+DROP TABLE LALENIRO.Habitacion_has_Reserva;
+GO
+IF OBJECT_ID('LALENIRO.Consumible') IS NOT NULL
+DROP TABLE LALENIRO.Consumible;
+GO
+IF OBJECT_ID('LALENIRO.Direccion') IS NOT NULL
+DROP TABLE LALENIRO.Direccion;
+GO
+IF OBJECT_ID('LALENIRO.Estadia') IS NOT NULL
+DROP TABLE LALENIRO.Estadia;
+GO
+IF OBJECT_ID('LALENIRO.Rol') IS NOT NULL
+DROP TABLE LALENIRO.Rol;
+GO
+IF OBJECT_ID('LALENIRO.Funcionalidad') IS NOT NULL
+DROP TABLE LALENIRO.Funcionalidad;
+GO
+IF OBJECT_ID('LALENIRO.Factura') IS NOT NULL
+DROP TABLE LALENIRO.Factura;
+GO
+IF OBJECT_ID('LALENIRO.Huesped') IS NOT NULL
+DROP TABLE LALENIRO.Huesped;
+GO
+IF OBJECT_ID('LALENIRO.Regimen') IS NOT NULL
+DROP TABLE LALENIRO.Regimen;
+GO
+IF OBJECT_ID('LALENIRO.Tipo_Habitacion') IS NOT NULL
+DROP TABLE LALENIRO.Tipo_Habitacion;
+GO
+IF OBJECT_ID('LALENIRO.Habitacion') IS NOT NULL
+DROP TABLE LALENIRO.Habitacion;
+GO
+IF OBJECT_ID('LALENIRO.Reserva') IS NOT NULL
+DROP TABLE LALENIRO.Reserva;
+GO
+IF OBJECT_ID('LALENIRO.Hotel') IS NOT NULL
+DROP TABLE LALENIRO.Hotel;
+GO
+IF OBJECT_ID('LALENIRO.Usuario') IS NOT NULL
+DROP TABLE LALENIRO.Usuario																																												;
+GO
+
+
+
+
+------------------------------DROP SCHEMA------------------------------------
+IF SCHEMA_ID('LALENIRO') IS NOT NULL
+	DROP SCHEMA [LALENIRO]
+GO
+
+-----------------------------CREACION SCHEMA --------------------------------
+CREATE SCHEMA [LALENIRO]
+GO
  
- /* creacion de tablas */
+-----------------------------CREACION TABLAS --------------------------------
 
  CREATE TABLE LALENIRO.Direccion(
 	Dir_Codigo numeric(18, 0) identity(1,1) primary key,
@@ -153,46 +217,59 @@ CREATE TABLE LALENIRO.Huesped(
 
  )
  go
+ -----------------------------TRIGGERS------------------------------
 
 
- /* insert de direcciones del hotel*/
 
- insert into LALENIRO.Direccion(Dir_Ciudad, Dir_Calle, Dir_Nro_Calle)
- select distinct Hotel_Ciudad, Hotel_Calle, Hotel_Nro_Calle
- from gd_esquema.Maestra
- go
+------------------------------MIGRACION------------------------------
 
- /*insert direccion clientes*/
- insert into LALENIRO.Direccion(Dir_Calle, Dir_Nro_Calle,Dir_Piso, Dir_Depto)
- select distinct Cliente_Dom_Calle,Cliente_Nro_Calle, Cliente_Piso, Cliente_Depto
- from gd_esquema.Maestra
- go
-
- /*insert hoteles*/
- insert into LALENIRO.Hotel(Hot_CantEstrellas, Hot_Recarga_Estrella,Direccion_Dir_Codigo)
- select distinct Hotel_CantEstrella,Hotel_Recarga_Estrella, (select Dir_Codigo from LALENIRO.Direccion where Dir_Ciudad = Hotel_Ciudad and Dir_Calle = Hotel_Calle and Dir_Nro_Calle = Hotel_Nro_Calle and Dir_piso is NULL and Dir_Depto is NULL)
- from gd_esquema.Maestra
- go
  
- /*insert regimen*/
- insert into LALENIRO.Regimen(Reg_Descripcion, Reg_Precio)
- select distinct Regimen_Descripcion, Regimen_Precio
- from gd_esquema.Maestra
- go
+ CREATE PROCEDURE [LOSNOOBS].PR_MIGRACION
+AS
+BEGIN
+		/* DIRECCION hoteles*/
+		 insert into LALENIRO.Direccion(Dir_Ciudad, Dir_Calle, Dir_Nro_Calle)
+		 select distinct Hotel_Ciudad, Hotel_Calle, Hotel_Nro_Calle
+		 from gd_esquema.Maestra
+		 GROUP BY Hotel_Ciudad, Hotel_Calle, Hotel_Nro_Calle
+		 
+		 
 
- /*insert consumible*/
- insert into LALENIRO.Consumible(Consu_Codigo, Consu_Descripcion, Consu_Precio)
- select distinct Consumible_Codigo, Consumible_Descripcion,Consumible_Precio 
- from gd_esquema.Maestra
- where Consumible_Codigo is not null
- go
+		 /*DIRECCION clientes*/
+		 insert into LALENIRO.Direccion(Dir_Calle, Dir_Nro_Calle,Dir_Piso, Dir_Depto)
+		 select distinct Cliente_Dom_Calle,Cliente_Nro_Calle, Cliente_Piso, Cliente_Depto
+		 from gd_esquema.Maestra
+		 GROUP BY Cliente_Dom_Calle, Cliente_Nro_Calle, Cliente_Piso, Cliente_Depto
+		 
 
-  /*insert tipo habitacion*/
- insert into LALENIRO.Tipo_Habitacion(Tipo_Habitacion_Codigo, Tipo_Habitacion_Descripcion,Tipo_Habitacion_Porcentual)
- select distinct Habitacion_Tipo_Codigo,Habitacion_Tipo_Descripcion,Habitacion_Tipo_Porcentual
- from gd_esquema.Maestra
+		 /*HOTEL*/
+		 insert into LALENIRO.Hotel(Hot_CantEstrellas, Hot_Recarga_Estrella,Direccion_Dir_Codigo)
+		 select distinct Hotel_CantEstrella,Hotel_Recarga_Estrella, (select Dir_Codigo from LALENIRO.Direccion where Dir_Ciudad = Hotel_Ciudad and Dir_Calle = Hotel_Calle and Dir_Nro_Calle = Hotel_Nro_Calle and Dir_piso is NULL and Dir_Depto is NULL)
+		 from gd_esquema.Maestra
+		 
+		 
+ 
+		 /*insert regimen*/
+		 insert into LALENIRO.Regimen(Reg_Descripcion, Reg_Precio)
+		 select distinct Regimen_Descripcion, Regimen_Precio
+		 from gd_esquema.Maestra
+		 GROUP BY  Regimen_Descripcion, Regimen_Precio
+		 
 
- go
+		 /*insert consumible*/
+		 insert into LALENIRO.Consumible(Consu_Codigo, Consu_Descripcion, Consu_Precio)
+		 select distinct Consumible_Codigo, Consumible_Descripcion,Consumible_Precio 
+		 from gd_esquema.Maestra
+		 where Consumible_Codigo is not null
+		 GROUP BY Consumible_Codigo, Consumible_Descripcion,Consumible_Precio 
+
+		  /*insert tipo habitacion*/
+		 insert into LALENIRO.Tipo_Habitacion(Tipo_Habitacion_Codigo, Tipo_Habitacion_Descripcion,Tipo_Habitacion_Porcentual)
+		 select distinct Habitacion_Tipo_Codigo,Habitacion_Tipo_Descripcion,Habitacion_Tipo_Porcentual
+		 from gd_esquema.Maestra
+		 GROUP BY Habitacion_Tipo_Codigo,Habitacion_Tipo_Descripcion,Habitacion_Tipo_Porcentual
+END
+GO
 
 
  /*
@@ -216,4 +293,97 @@ CREATE TABLE LALENIRO.Huesped(
   select* from LALENIRO.Direccion join LALENIRO.Hotel on(Dir_Codigo = Direccion_Dir_Codigo)
 
   */
+
+---------------------------------------FKS--------------------------------------------------------------
+  
+ALTER TABLE [LALENIRO].[Estadia]  WITH CHECK ADD  CONSTRAINT [FK_Estadia_Usuario] FOREIGN KEY([Usuario_Usu_Mail])
+REFERENCES [LALENIRO].[Usuario] ([Usu_Mail])
+GO
+ALTER TABLE [LALENIRO].[Estadia] CHECK CONSTRAINT [FK_Estadia_Usuario]
+GO
+ALTER TABLE [LALENIRO].[Factura]  WITH CHECK ADD  CONSTRAINT [FK_Factura_Usuario] FOREIGN KEY([Usuario_Usu_Mail])
+REFERENCES [LALENIRO].[Usuario] ([Usu_Mail])
+GO
+ALTER TABLE [LALENIRO].[Factura] CHECK CONSTRAINT [FK_Factura_Usuario]
+GO
+ALTER TABLE [LALENIRO].[Habitacion]  WITH CHECK ADD  CONSTRAINT [FK_Habitacion_Hotel] FOREIGN KEY([Hotel_Hot_Codigo])
+REFERENCES [LALENIRO].[Hotel] ([Hot_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Habitacion] CHECK CONSTRAINT [FK_Habitacion_Hotel]
+GO
+ALTER TABLE [LALENIRO].[Habitacion]  WITH CHECK ADD  CONSTRAINT [FK_Habitacion_Tipo_Habitacion] FOREIGN KEY([Tipo_Habitacion_Codigo])
+REFERENCES [LALENIRO].[Tipo_Habitacion] ([Tipo_Habitacion_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Habitacion] CHECK CONSTRAINT [FK_Habitacion_Tipo_Habitacion]
+GO
+ALTER TABLE [LALENIRO].[Habitacion_has_Reserva]  WITH CHECK ADD  CONSTRAINT [FK_Habitacion_has_Reserva_Habitacion] FOREIGN KEY([Habitacion_Hab_Codigo])
+REFERENCES [LALENIRO].[Habitacion] ([Hab_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Habitacion_has_Reserva] CHECK CONSTRAINT [FK_Habitacion_has_Reserva_Habitacion]
+GO
+ALTER TABLE [LALENIRO].[Habitacion_has_Reserva]  WITH CHECK ADD  CONSTRAINT [FK_Habitacion_has_Reserva_Reserva] FOREIGN KEY([Rerserva_Res_Codigo])
+REFERENCES [LALENIRO].[Reserva] ([Res_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Habitacion_has_Reserva] CHECK CONSTRAINT [FK_Habitacion_has_Reserva_Reserva]
+GO
+ALTER TABLE [LALENIRO].[Hotel]  WITH CHECK ADD  CONSTRAINT [FK_Hotel_Direccion] FOREIGN KEY([Direccion_Dir_Codigo])
+REFERENCES [LALENIRO].[Direccion] ([Dir_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Hotel] CHECK CONSTRAINT [FK_Hotel_Direccion]
+GO
+ALTER TABLE [LALENIRO].[Huesped]  WITH CHECK ADD  CONSTRAINT [FK_Huesped_Reserva] FOREIGN KEY([Reserva_Res_Codigo])
+REFERENCES [LALENIRO].[Reserva] ([Res_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Huesped] CHECK CONSTRAINT [FK_Huesped_Reserva]
+GO
+ALTER TABLE [LALENIRO].[Item_Factura]  WITH CHECK ADD  CONSTRAINT [FK_Item_Factura_Consumible] FOREIGN KEY([Consumible_Consu_Codigo])
+REFERENCES [LALENIRO].[Consumible] ([Consu_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Item_Factura] CHECK CONSTRAINT [FK_Item_Factura_Consumible]
+GO
+ALTER TABLE [LALENIRO].[Item_Factura]  WITH CHECK ADD  CONSTRAINT [FK_Item_Factura_Factura] FOREIGN KEY([Factura_Fac_Numero])
+REFERENCES [LALENIRO].[Factura] ([Fac_Nro])
+GO
+ALTER TABLE [LALENIRO].[Item_Factura] CHECK CONSTRAINT [FK_Item_Factura_Factura]
+GO
+ALTER TABLE [LALENIRO].[Reserva]  WITH CHECK ADD  CONSTRAINT [FK_Reserva_Regimen] FOREIGN KEY([Regimen_Reg_Codigo])
+REFERENCES [LALENIRO].[Regimen] ([Reg_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Reserva] CHECK CONSTRAINT [FK_Reserva_Regimen]
+GO
+ALTER TABLE [LALENIRO].[Reserva]  WITH CHECK ADD  CONSTRAINT [FK_Reserva_Usuario] FOREIGN KEY([Usuario_Usu_Mail])
+REFERENCES [LALENIRO].[Usuario] ([Usu_Mail])
+GO
+ALTER TABLE [LALENIRO].[Reserva] CHECK CONSTRAINT [FK_Reserva_Usuario]
+GO
+ALTER TABLE [LALENIRO].[Rol_has_Funcionalidad]  WITH CHECK ADD  CONSTRAINT [FK_Rol_has_Funcionalidad_Funcionalidad] FOREIGN KEY([Funcionalidad_Fun_Codigo])
+REFERENCES [LALENIRO].[Funcionalidad] ([Fun_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Rol_has_Funcionalidad] CHECK CONSTRAINT [FK_Rol_has_Funcionalidad_Funcionalidad]
+GO
+ALTER TABLE [LALENIRO].[Rol_has_Funcionalidad]  WITH CHECK ADD  CONSTRAINT [FK_Rol_has_Funcionalidad_Rol] FOREIGN KEY([Rol_Rol_Codigo])
+REFERENCES [LALENIRO].[Rol] ([Rol_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Rol_has_Funcionalidad] CHECK CONSTRAINT [FK_Rol_has_Funcionalidad_Rol]
+GO
+ALTER TABLE [LALENIRO].[Usuario]  WITH CHECK ADD  CONSTRAINT [FK_Usuario_Direccion] FOREIGN KEY([Direccion_Dir_Codigo])
+REFERENCES [LALENIRO].[Direccion] ([Dir_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Usuario] CHECK CONSTRAINT [FK_Usuario_Direccion]
+GO
+ALTER TABLE [LALENIRO].[Usuario]  WITH CHECK ADD  CONSTRAINT [FK_Usuario_Hotel] FOREIGN KEY([Hotel_Hot_Codigo])
+REFERENCES [LALENIRO].[Hotel] ([Hot_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Usuario] CHECK CONSTRAINT [FK_Usuario_Hotel]
+GO
+ALTER TABLE [LALENIRO].[Usuario_has_Rol]  WITH CHECK ADD  CONSTRAINT [FK_Usuario_has_Rol_Rol] FOREIGN KEY([Rol_Rol_Codigo])
+REFERENCES [LALENIRO].[Rol] ([Rol_Codigo])
+GO
+ALTER TABLE [LALENIRO].[Usuario_has_Rol] CHECK CONSTRAINT [FK_Usuario_has_Rol_Rol]
+GO
+ALTER TABLE [LALENIRO].[Usuario_has_Rol]  WITH CHECK ADD  CONSTRAINT [FK_Usuario_has_Rol_Usuario] FOREIGN KEY([Usuario_Usu_mail])
+REFERENCES [LALENIRO].[Usuario] ([Usu_Mail])
+GO
+ALTER TABLE [LALENIRO].[Usuario_has_Rol] CHECK CONSTRAINT [FK_Usuario_has_Rol_Usuario]
+GO
 
