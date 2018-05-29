@@ -231,7 +231,7 @@ BEGIN
 		 insert into LALENIRO.Direccion(Dir_Ciudad, Dir_Calle, Dir_Nro_Calle)
 		 select distinct Hotel_Ciudad, Hotel_Calle, Hotel_Nro_Calle
 		 from gd_esquema.Maestra
-		 GROUP BY Hotel_Ciudad, Hotel_Calle, Hotel_Nro_Calle
+		
 		 
 		 
 
@@ -239,7 +239,6 @@ BEGIN
 		 insert into LALENIRO.Direccion(Dir_Calle, Dir_Nro_Calle,Dir_Piso, Dir_Depto)
 		 select distinct Cliente_Dom_Calle,Cliente_Nro_Calle, Cliente_Piso, Cliente_Depto
 		 from gd_esquema.Maestra
-		 GROUP BY Cliente_Dom_Calle, Cliente_Nro_Calle, Cliente_Piso, Cliente_Depto
 		 
 
 		 /*HOTEL*/
@@ -253,7 +252,6 @@ BEGIN
 		 insert into LALENIRO.Regimen(Reg_Descripcion, Reg_Precio)
 		 select distinct Regimen_Descripcion, Regimen_Precio
 		 from gd_esquema.Maestra
-		 GROUP BY  Regimen_Descripcion, Regimen_Precio
 		 
 
 		 /*insert consumible*/
@@ -261,7 +259,6 @@ BEGIN
 		 select distinct Consumible_Codigo, Consumible_Descripcion,Consumible_Precio 
 		 from gd_esquema.Maestra
 		 where Consumible_Codigo is not null
-		 GROUP BY Consumible_Codigo, Consumible_Descripcion,Consumible_Precio 
 
 		  /*insert tipo habitacion*/
 		 insert into LALENIRO.Tipo_Habitacion(Tipo_Habitacion_Codigo, Tipo_Habitacion_Descripcion,Tipo_Habitacion_Porcentual)
@@ -274,14 +271,7 @@ BEGIN
 		SELECT Habitacion_Piso, Habitacion_Numero, Habitacion_Frente, ,Tipo_Habitacion_Codigo
 		FROM  gd_esquema.Maestra
 
-		/*insert consumibles*/
-		INSERT into LALENIRO.Consumible(Consumimble_codigo, Consumible_Descripcion, Consumible_Precio)
-		SELECT Consumimble_codigo, Consumible_Descripcion, Consumible_Precio
-		FROM gd_esquema.Maestra
-		GROUP BY Consumimble_codigo, Consumible_Descripcion, Consumible_Precio
 
-		/*insert Item_Factura*/
-		
 
 
 
