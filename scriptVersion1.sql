@@ -268,6 +268,23 @@ BEGIN
 		 select distinct Habitacion_Tipo_Codigo,Habitacion_Tipo_Descripcion,Habitacion_Tipo_Porcentual
 		 from gd_esquema.Maestra
 		 GROUP BY Habitacion_Tipo_Codigo,Habitacion_Tipo_Descripcion,Habitacion_Tipo_Porcentual
+
+		/*insert habitacion*/
+		INSERT into LALENIRO.Habitacion(Hab_Piso, Hab_Numero,Hab_Ubicacion, Hotel_hot_codigo, tipo_habitacion_tipo_habitacion_codigo)
+		SELECT Habitacion_Piso, Habitacion_Numero, Habitacion_Frente, ,Tipo_Habitacion_Codigo
+		FROM  gd_esquema.Maestra
+
+		/*insert consumibles*/
+		INSERT into LALENIRO.Consumible(Consumimble_codigo, Consumible_Descripcion, Consumible_Precio)
+		SELECT Consumimble_codigo, Consumible_Descripcion, Consumible_Precio
+		FROM gd_esquema.Maestra
+		GROUP BY Consumimble_codigo, Consumible_Descripcion, Consumible_Precio
+
+		/*insert Item_Factura*/
+		
+
+
+
 END
 GO
 
@@ -275,7 +292,7 @@ GO
  /*
 
 /* select varios*/
- select distinct Hotel_Ciudad, Hotel_Calle, Hotel_Nro_Calle, Hotel_CantEstrella, Hotel_Recarga_Estrella from gd_esquema.Maestra
+ /*select distinct Hotel_Ciudad, Hotel_Calle, Hotel_Nro_Calle, Hotel_CantEstrella, Hotel_Recarga_Estrella from gd_esquema.Maestra
  select distinct Consumible_Codigo, Consumible_Descripcion,Consumible_Precio from gd_esquema.Maestra where Consumible_Codigo is not null
   select Cliente_Pasaporte_Nro, Cliente_Apellido, Cliente_Nombre, Cliente_Fecha_Nac,Cliente_Mail,Cliente_Dom_Calle,Cliente_Nro_Calle,Cliente_Piso,Cliente_Depto, Cliente_Nacionalidad from gd_esquema.Maestra
   group by Cliente_Pasaporte_Nro, Cliente_Apellido, Cliente_Nombre, Cliente_Fecha_Nac,Cliente_Mail,Cliente_Dom_Calle,Cliente_Nro_Calle,Cliente_Piso,Cliente_Depto, Cliente_Nacionalidad
