@@ -10,6 +10,9 @@ DROP PROCEDURE LALENIRO.PR_MIGRACION;
 IF OBJECT_ID('LALENIRO.PR_REFACTORIZAR_HUESPED') IS NOT NULL
 DROP PROCEDURE LALENIRO.PR_REFACTORIZAR_HUESPED;
 
+IF OBJECT_ID('LALENIRO.PR_CREAR_ROL') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_CREAR_ROL;
+
 ------------------------------DROP TRIGGERS ------------------------------
 
 ------------------------------DROP DE TABLAS------------------------------
@@ -171,7 +174,7 @@ go
 	Res_Usuario_Creador nvarchar(255) ,
 	Res_Usuario_UltimaModificacion nvarchar(255) ,
 	Res_Estado integer DEFAULT 0, /*0:RESERVA CORRECTA ,1: RESERVA MODIFICADA, 2:RESERVA CANCELADA POR RECEPCION, 3:RESERVA CANCELADA POR CLIENTE, 4: RESERVA CANCELADA POR NO-SHOW, 5:RESERVA CON (INGRESO EFECTIVO)*/
-	Usuario_Usu_Username nvarchar(255) NOT NULL,
+	Usuario_Usu_Username nvarchar(255),
 	Hotel_Hot_Codigo numeric(18, 0) , /* FK Hotel_has_Regimen*/
 	Regimen_Reg_Codigo numeric(18, 0), /* FK Hotel_has_Regimen*/
 	Estadia_Est_Codigo numeric(18, 0),/* FK  estadia*/
@@ -247,23 +250,6 @@ go
 )
 go
 
-/*  nro de identificacion existen repetidos no puede ser pk
- CREATE TABLE LALENIRO.Huesped(
-	Hues_NroIdentificacion numeric(18, 0) NOT NULL,
-	Hues_TipoIdentificacion nvarchar(255) NOT NULL, 
-	Hues_Nombre nvarchar(255) ,
-	Hues_Apellido nvarchar(255),
-	Hues_Mail nvarchar(255) UNIQUE,
-	Hues_Telefono numeric(18, 0),
-	Hues_Fecha_Nacimiento datetime,
-	Hues_Nacionalidad nvarchar(255),
-	Hues_Estado bit DEFAULT 1,
-	--Reserva_Res_Codigo numeric(18, 0) NOT NULL,
-	PRIMARY KEY(Hues_TipoIdentificacion, Hues_NroIdentificacion)
- )
- go
- */
-
   CREATE TABLE LALENIRO.Huesped(
 	hues_Codigo numeric(18, 0) identity(1,1) primary key,
 	Hues_NroIdentificacion numeric(18, 0) NOT NULL, --TIENE Q SER UNICO
@@ -282,7 +268,7 @@ go
  CREATE TABLE LALENIRO.Usuario_has_Rol(
 	Rol_Rol_Codigo numeric(18, 0) NOT NULL,
 	Usuario_Usu_Username nvarchar(255) NOT NULL,
-	Usuario_Rol_Estado bit DEFAULT 1,
+	--Usuario_Rol_Estado bit DEFAULT 1,
 	PRIMARY KEY (Usuario_Usu_Username, Rol_Rol_Codigo)
 
  )
@@ -310,6 +296,7 @@ go
   CREATE TABLE LALENIRO.Rol(
 	Rol_Codigo numeric(18, 0) identity(1,1) primary key,
 	Rol_Descripcion nvarchar(255) NULL,
+	Rol_Estado bit DEFAULT 1, -- 1 ES ACTIVO
 
  )
  go
@@ -329,82 +316,28 @@ go
  go
 
  -----------------------------TRIGGERS------------------------------
- GO
- /*
-   NO SIRVE TARDA MUCHO 6 MIN
-
- CREATE TRIGGER LALENIRO.TR_INSERT_HUESPED ON LALENIRO.HUESPED INSTEAD OF INSERT
- AS
- BEGIN
- 	DECLARE	@Hues_NroIdentificacion numeric(18, 0),
-	@Hues_TipoIdentificacion nvarchar(255), 
-	@Hues_Nombre nvarchar(255) ,
-	@Hues_Apellido nvarchar(255),
-	@Hues_Mail nvarchar(255),
-	@Hues_Telefono numeric(18, 0),
-	@Hues_Fecha_Nacimiento datetime,
-	@Hues_Nacionalidad nvarchar(255),
-	@Hues_Estado bit
-
-	DECLARE HUESPEDES_CURSOR CURSOR FOR 
-	SELECT  Hues_NroIdentificacion, Hues_TipoIdentificacion, Hues_Nombre, Hues_Apellido ,Hues_Mail ,Hues_Telefono ,Hues_Fecha_Nacimiento ,Hues_Nacionalidad, Hues_Estado  FROM inserted
-
-	OPEN HUESPEDES_CURSOR;
-	FETCH NEXT FROM HUESPEDES_CURSOR INTO @Hues_NroIdentificacion, @Hues_TipoIdentificacion, @Hues_Nombre, @Hues_Apellido ,@Hues_Mail ,@Hues_Telefono ,@Hues_Fecha_Nacimiento ,@Hues_Nacionalidad, @Hues_Estado;
-
-	WHILE @@FETCH_STATUS = 0
-	BEGIN
-		IF(@Hues_Estado = 0)--SIGNIFICA QUE VIENE DE LA MIGRACION
-			BEGIN
-				IF @Hues_NroIdentificacion = (SELECT DISTINCT Hues_NroIdentificacion FROM LALENIRO.Huesped WHERE Hues_NroIdentificacion = @Hues_NroIdentificacion AND Hues_TipoIdentificacion =@Hues_TipoIdentificacion ) OR @Hues_Mail IN (SELECT Hues_Mail FROM LALENIRO.Huesped )
-					BEGIN 
-
-						INSERT INTO LALENIRO.Huesped(Hues_NroIdentificacion,Hues_TipoIdentificacion,Hues_Nombre,Hues_Apellido,Hues_Mail,Hues_Fecha_Nacimiento, Hues_Nacionalidad,Hues_Telefono, Hues_Estado)
-						VALUES (@Hues_NroIdentificacion, @Hues_TipoIdentificacion, @Hues_Nombre, @Hues_Apellido ,@Hues_Mail,@Hues_Fecha_Nacimiento ,@Hues_Nacionalidad,@Hues_Telefono, 0) --QUEDA INHABILITADO
-
-					END
-
-				ELSE 
-					BEGIN
-			
-						INSERT INTO LALENIRO.Huesped(Hues_NroIdentificacion,Hues_TipoIdentificacion,Hues_Nombre,Hues_Apellido,Hues_Mail,Hues_Fecha_Nacimiento, Hues_Nacionalidad, Hues_Estado,Hues_Telefono)
-						VALUES (@Hues_NroIdentificacion, @Hues_TipoIdentificacion, @Hues_Nombre, @Hues_Apellido ,@Hues_Mail,@Hues_Fecha_Nacimiento ,@Hues_Nacionalidad, 1 ,@Hues_Telefono) 
-
-					END
-		
-			END
-		ELSE
-			BEGIN
-				IF @Hues_NroIdentificacion = (SELECT DISTINCT Hues_NroIdentificacion FROM LALENIRO.Huesped WHERE Hues_NroIdentificacion = @Hues_NroIdentificacion AND Hues_TipoIdentificacion =@Hues_TipoIdentificacion ) OR @Hues_Mail IN (SELECT Hues_Mail FROM LALENIRO.Huesped )
-					BEGIN 					
-						RAISERROR('ERROR AL REGISTRAR NUEVO HUESPED ', 1, 1)
-					END
-
-				ELSE 
-					BEGIN
-			
-						INSERT INTO LALENIRO.Huesped(Hues_NroIdentificacion,Hues_TipoIdentificacion,Hues_Nombre,Hues_Apellido,Hues_Mail,Hues_Fecha_Nacimiento, Hues_Nacionalidad, Hues_Estado,Hues_Telefono)
-						VALUES (@Hues_NroIdentificacion, @Hues_TipoIdentificacion, @Hues_Nombre, @Hues_Apellido ,@Hues_Mail,@Hues_Fecha_Nacimiento ,@Hues_Nacionalidad, @Hues_Estado,@Hues_Telefono) 
-
-					END
-			END
-
-	FETCH NEXT FROM HUESPEDES_CURSOR INTO @Hues_NroIdentificacion, @Hues_TipoIdentificacion, @Hues_Nombre, @Hues_Apellido ,@Hues_Mail ,@Hues_Telefono ,@Hues_Fecha_Nacimiento ,@Hues_Nacionalidad, @Hues_Estado;
-	END;
-	
-	CLOSE HUESPEDES_CURSOR;
-	DEALLOCATE HUESPEDES_CURSOR;
-END
-
-
  
- */
+------------------------------ABM ROL------------------------------------
 
- GO
+CREATE PROCEDURE LALENIRO.PR_CREAR_ROL
+  @nombre_rol nvarchar(255) 
+AS
+  BEGIN TRY
+    INSERT INTO LALENIRO.ROL (Rol_Descripcion) VALUES(@nombre_rol);
 
- 
+	SELECT SCOPE_IDENTITY();
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+
 ------------------------------STORE PROCEDURE------------------------------
+
 -- DESHABILITA HUESPEDES REPETIDOS POR MAIL E IDENTIFICACION
+
  CREATE PROCEDURE LALENIRO.PR_REFACTORIZAR_HUESPED
  AS
  BEGIN 
@@ -495,6 +428,28 @@ BEGIN
 		FROM  gd_esquema.Maestra
 		EXECUTE LALENIRO.PR_REFACTORIZAR_HUESPED --DESHABILITA REPETIDOS
 
+			/*insert RESERVA */
+
+		INSERT INTO LALENIRO.Reserva(Res_Codigo,Res_Fecha_Desde,Res_Fecha_Hasta,Res_Cant_Noches,Hotel_Hot_Codigo,Regimen_Reg_Codigo) 
+		SELECT DISTINCT Reserva_Codigo,CONVERT(datetime,Reserva_Fecha_Inicio),
+				CONVERT(datetime,DATEADD(DAY,Reserva_Cant_Noches, Reserva_Fecha_Inicio)),
+				Reserva_Cant_Noches, H.Hot_Codigo, R.Reg_Codigo
+		FROM gd_esquema.Maestra, LALENIRO.Hotel H JOIN LALENIRO.Direccion on (Direccion_Dir_Codigo = Dir_Codigo), LALENIRO.Regimen R
+		WHERE (Dir_Calle = Hotel_Calle and Dir_Ciudad = Hotel_Ciudad and Dir_Nro_Calle = Hotel_Nro_Calle) and R.Reg_Descripcion = Regimen_Descripcion AND R.Reg_PrecioBasePorPersona = Regimen_Precio
+
+		--SELECT* FROM LALENIRO.Reserva
+
+			/*insert ESTADIA REVISAR.. */
+
+	/*	INSERT INTO LALENIRO.Estadia(Est_Cant_Noches,Est_Fecha_CheckIn,Est_Fecha_CheckOut) 
+		SELECT DISTINCT Estadia_Cant_Noches,CONVERT(datetime,Estadia_Fecha_Inicio),
+				CONVERT(datetime,DATEADD(DAY,Estadia_Cant_Noches, Estadia_Fecha_Inicio))
+		FROM gd_esquema.Maestra
+		
+
+		*/
+
+
 		
 END
 GO
@@ -523,7 +478,6 @@ ALTER TABLE [LALENIRO].[Hotel_has_Regimen] ADD FOREIGN KEY ([Regimen_Reg_Codigo]
 
 ALTER TABLE [LALENIRO].[Habitacion_has_Huesped_has_Reserva] ADD FOREIGN KEY ([Habitacion_Hotel_Hot_Codigo],[Habitacion_Hab_Numero]) REFERENCES [LALENIRO].[Habitacion] ([Hotel_Hot_Codigo],[Hab_Numero])
 ALTER TABLE [LALENIRO].[Habitacion_has_Huesped_has_Reserva] ADD FOREIGN KEY ([Reserva_Res_Codigo]) REFERENCES [LALENIRO].[Reserva] 
---ALTER TABLE [LALENIRO].[Habitacion_has_Huesped_has_Reserva] ADD FOREIGN KEY ([Huesped_Hues_TipoIdentificacion],[Huesped_Hues_NroIdentificacion]) REFERENCES [LALENIRO].[Huesped] ([Hues_TipoIdentificacion],[Hues_NroIdentificacion])
 ALTER TABLE [LALENIRO].[Habitacion_has_Huesped_has_Reserva] ADD FOREIGN KEY ([Huesped_Hues_Codigo]) REFERENCES [LALENIRO].[Huesped]
 
 ALTER TABLE [LALENIRO].[Reserva] ADD FOREIGN KEY ([Usuario_Usu_Username]) REFERENCES [LALENIRO].[Usuario]
