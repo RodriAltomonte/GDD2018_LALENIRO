@@ -1,7 +1,7 @@
 USE GD1C2018
 GO
  
-
+ 
 ------------------------------DROP PROCEDURES-----------------------------
 
 IF OBJECT_ID('LALENIRO.PR_MIGRACION') IS NOT NULL
@@ -12,6 +12,12 @@ DROP PROCEDURE LALENIRO.PR_REFACTORIZAR_HUESPED;
 
 IF OBJECT_ID('LALENIRO.PR_CREAR_ROL') IS NOT NULL
 DROP PROCEDURE LALENIRO.PR_CREAR_ROL;
+
+IF OBJECT_ID('LALENIRO.PR_INSERT_DATOS_INICIALES') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_INSERT_DATOS_INICIALES;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_DESCRIPCION_ROL') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_DESCRIPCION_ROL;
 
 ------------------------------DROP TRIGGERS ------------------------------
 
@@ -158,7 +164,6 @@ go
 	--Huesped_Hues_NroIdentificacion numeric(18, 0) NOT NULL, cambie fk huesped
 	--Huesped_Hues_TipoIdentificacion nvarchar(255) NOT NULL,
 	Huesped_hues_Codigo numeric(18, 0),
-	--primary key (Huesped_Hues_NroIdentificacion,Huesped_Hues_TipoIdentificacion,Habitacion_Hab_Numero,Habitacion_Hotel_Hot_Codigo,Reserva_Res_Codigo)
 	primary key (Huesped_hues_Codigo ,Habitacion_Hab_Numero,Habitacion_Hotel_Hot_Codigo,Reserva_Res_Codigo)
  )
  go
@@ -222,14 +227,14 @@ go
   CREATE TABLE LALENIRO.Rol_has_Funcionalidad(
 	Rol_Rol_Codigo numeric(18, 0) NOT NULL,
 	Funcionalidad_Fun_Codigo numeric(18, 0) NOT NULL,
-	Rol_Funcionalidad_Estado bit DEFAULT 1,
+	--Rol_Funcionalidad_Estado bit DEFAULT 1,
 	PRIMARY KEY(Rol_Rol_Codigo, Funcionalidad_Fun_Codigo)
  )
  go
 
  CREATE TABLE LALENIRO.Funcionalidad(
 	Fun_Codigo numeric(18, 0) identity(1,1) primary key,
-	Fun_Detalle nvarchar(255),
+	Fun_Detalle nvarchar(255) UNIQUE,
  )
  go
 
@@ -295,7 +300,7 @@ go
 
   CREATE TABLE LALENIRO.Rol(
 	Rol_Codigo numeric(18, 0) identity(1,1) primary key,
-	Rol_Descripcion nvarchar(255) NULL,
+	Rol_Descripcion nvarchar(255) UNIQUE,
 	Rol_Estado bit DEFAULT 1, -- 1 ES ACTIVO
 
  )
@@ -316,7 +321,10 @@ go
  go
 
  -----------------------------TRIGGERS------------------------------
- 
+
+
+ -----------------------------STORE PROCEDURE----------------------------
+
 ------------------------------ABM ROL------------------------------------
 
 CREATE PROCEDURE LALENIRO.PR_CREAR_ROL
@@ -332,9 +340,21 @@ AS
   END CATCH
 GO
 
+CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_DESCRIPCION_ROL
+  @Rol_Codigo numeric(18, 0),
+  @Rol_Descripcion_NUEVA nvarchar(255)
+AS
+  BEGIN TRY
+	 UPDATE LALENIRO.Rol SET Rol_Descripcion = @Rol_Descripcion_NUEVA WHERE Rol_Codigo =@Rol_Codigo
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
 
 
-------------------------------STORE PROCEDURE------------------------------
+
+------------------------------STORE PROCEDURE OTROS------------------------------
 
 -- DESHABILITA HUESPEDES REPETIDOS POR MAIL E IDENTIFICACION
 
@@ -350,7 +370,43 @@ GO
 	);
  END
  GO
+ ------------------------------FUNCIONALIDADES-------------------------------
 
+CREATE PROCEDURE LALENIRO.PR_INSERT_DATOS_INICIALES
+AS
+BEGIN
+	
+	-- INSERT DE ROL 
+	INSERT INTO LALENIRO.Rol (Rol_Descripcion) VALUES('Administrador')
+	INSERT INTO LALENIRO.Rol (Rol_Descripcion) VALUES('Recepcionista')
+	INSERT INTO LALENIRO.Rol (Rol_Descripcion) VALUES('Guest')
+	
+	-- INSERT DE FUNCIONALIDAD 
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('ABM ROL')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('ABM USUARIO')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('ABM HUESPED')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('ABM HOTEL')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('ABM HABITACION')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('ABM REGIMEN DE ESTADIA')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('CREAR Y MODIFICAR RESERVAS')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('CANCELAR RESERVAS')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('REGISTRAR ESTADIA')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('REGISTRAR CONSUMIBLE')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('FACTURAR ESTADIA')
+	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('LISTADO ESTADISTICO')
+
+	-- INSERT DE ROL_HAS_FUNCIONALIDAD
+
+	INSERT INTO LALENIRO.Rol_has_Funcionalidad(Rol_Rol_Codigo,Funcionalidad_Fun_Codigo)
+	SELECT Rol_Codigo,Fun_Codigo FROM LALENIRO.ROL, LALENIRO.Funcionalidad WHERE Rol_Descripcion = 'Administrador' AND Fun_Detalle IN ('ABM ROL','ABM USUARIO','ABM HOTEL','ABM HABITACION','ABM REGIMEN DE ESTADIA','LISTADO ESTADISTICO' )
+		
+	INSERT INTO LALENIRO.Rol_has_Funcionalidad(Rol_Rol_Codigo,Funcionalidad_Fun_Codigo)
+	SELECT Rol_Codigo,Fun_Codigo FROM LALENIRO.ROL, LALENIRO.Funcionalidad WHERE Rol_Descripcion = 'Recepcionista' AND Fun_Detalle IN ('ABM HUESPED','CREAR Y MODIFICAR RESERVAS','CANCELAR RESERVAS','REGISTRAR ESTADIA','REGISTRAR CONSUMIBLE','FACTURAR ESTADIA')
+		
+	INSERT INTO LALENIRO.Rol_has_Funcionalidad(Rol_Rol_Codigo,Funcionalidad_Fun_Codigo)
+	SELECT Rol_Codigo,Fun_Codigo FROM LALENIRO.ROL, LALENIRO.Funcionalidad WHERE Rol_Descripcion = 'Guest' AND Fun_Detalle IN ('CREAR Y MODIFICAR RESERVAS','CANCELAR RESERVAS')
+END
+GO	
 
 ------------------------------MIGRACION------------------------------
  
@@ -438,16 +494,16 @@ BEGIN
 		WHERE (Dir_Calle = Hotel_Calle and Dir_Ciudad = Hotel_Ciudad and Dir_Nro_Calle = Hotel_Nro_Calle) and R.Reg_Descripcion = Regimen_Descripcion AND R.Reg_PrecioBasePorPersona = Regimen_Precio
 
 		--SELECT* FROM LALENIRO.Reserva
+		/*
+			/*insert ESTADIA */
 
-			/*insert ESTADIA REVISAR.. */
-
-	/*	INSERT INTO LALENIRO.Estadia(Est_Cant_Noches,Est_Fecha_CheckIn,Est_Fecha_CheckOut) 
+		INSERT INTO LALENIRO.Estadia(Est_Cant_Noches,Est_Fecha_CheckIn,Est_Fecha_CheckOut) 
 		SELECT DISTINCT Estadia_Cant_Noches,CONVERT(datetime,Estadia_Fecha_Inicio),
 				CONVERT(datetime,DATEADD(DAY,Estadia_Cant_Noches, Estadia_Fecha_Inicio))
 		FROM gd_esquema.Maestra
 		
-
 		*/
+		
 
 
 		
@@ -500,5 +556,6 @@ GO
 
 --SELECT * FROM gd_esquema.Maestra WHERE Cliente_Apellido = 'Garrido' and Cliente_Pasaporte_Nro = '43472661'
 
+EXECUTE LALENIRO.PR_INSERT_DATOS_INICIALES
 EXECUTE LALENIRO.PR_MIGRACION
 GO
