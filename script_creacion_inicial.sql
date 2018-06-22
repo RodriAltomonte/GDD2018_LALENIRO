@@ -130,13 +130,14 @@ CREATE TABLE LALENIRO.BajasPorMantenimiento(
  go
 
  CREATE TABLE LALENIRO.Factura(
-	Fac_Nro numeric(18, 0) identity(1,1) primary key,
-	Fac_Fecha datetime NULL,
-	Fact_Total numeric(18, 2) NULL,
-	Usuario_Usu_Username nvarchar(255) NOT NULL,
+	Fac_Nro numeric(18, 0) primary key,
+	Fac_Fecha datetime,
+	Fact_Total numeric(18, 2),
+	Fact_Precio_Estadia numeric(18, 0),
+	Usuario_Usu_Username nvarchar(255) ,
 	Estadia_Est_Codigo numeric(18, 0) NOT NULL,
-	Fac_FormaDePago nvarchar(255) NOT NULL,
-	Fac_DatosTarjeta nvarchar(255) NULL, /* no deberia ser de usuario? o huesped*/
+	Fac_FormaDePago nvarchar(255) ,
+	Fac_DatosTarjeta nvarchar(255), /* no deberia ser de usuario? o huesped*/
 
  )
  go
@@ -585,6 +586,48 @@ BEGIN
 		FROM gd_esquema.Maestra where Estadia_Cant_Noches is not null and Factura_Total is null 
 		
 		--SELECT* FROM LALENIRO.Estadia
+
+			/*insert factura */
+
+		INSERT INTO LALENIRO.Factura (Fac_Nro, Fac_Fecha,Fact_Total, Fact_Precio_Estadia, Estadia_Est_Codigo)
+		SELECT Factura_Nro,CONVERT(datetime,Factura_Fecha),Factura_Total,Item_Factura_Cantidad,Reserva_Codigo
+		from gd_esquema.Maestra where Consumible_Codigo is null and Factura_Nro is not null
+
+		
+		--SELECT* FROM LALENIRO.Factura
+
+			/*insert item_factura */
+
+		INSERT INTO LALENIRO.Item_Factura (Item_Factura_Cantidad,Item_Factura_Monto,Consumible_Consu_Codigo,Factura_Fac_Numero)
+		SELECT sum(Item_Factura_Monto) ,Item_Factura_Cantidad,Consumible_Codigo , Factura_Nro
+		from gd_esquema.Maestra where Consumible_Codigo is not null
+		group by Item_Factura_Cantidad,Consumible_Codigo , Factura_Nro
+
+		
+		--SELECT* FROM LALENIRO.Item_Factura
+
+
+			/*insert estadia_has_consumible */
+
+		INSERT INTO LALENIRO.Estadia_has_Consumible(Estadia_Est_Codigo,Consumible_Consu_Codigo)
+		SELECT distinct Reserva_Codigo, Consumible_Codigo
+		from gd_esquema.Maestra where Consumible_Codigo is not null 
+		
+		--SELECT* FROM LALENIRO.Estadia_has_Consumible
+
+			/*insert habitacion has huesped has reserva */
+		
+		INSERT INTO LALENIRO.Habitacion_has_Huesped_has_Reserva (Habitacion_Hab_Numero,Habitacion_Hotel_Hot_Codigo,Reserva_Res_Codigo,Huesped_hues_Codigo)
+		SELECT M.Habitacion_Numero,
+				(SELECT Hot_Codigo FROM LALENIRO.Hotel JOIN LALENIRO.Direccion ON (Direccion_Dir_Codigo = Dir_Codigo) 
+				 WHERE M.Hotel_Calle = Dir_Calle AND M.Hotel_Nro_Calle = Dir_Nro_Calle AND M.Hotel_Ciudad = Dir_Ciudad),
+			   M.Reserva_Codigo,
+			   (SELECT hues_Codigo FROM LALENIRO.Huesped WHERE M.Cliente_Pasaporte_Nro = Hues_NroIdentificacion AND M.Cliente_Mail = Hues_Mail AND M.Cliente_Fecha_Nac = Hues_Fecha_Nacimiento )
+		from gd_esquema.Maestra M
+		where M.Estadia_Fecha_Inicio is null 
+
+		--SELECT* FROM LALENIRO.Habitacion_has_Huesped_has_Reserva 
+
 
 		
 END
