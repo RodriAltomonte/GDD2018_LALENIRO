@@ -31,6 +31,41 @@ DROP PROCEDURE LALENIRO.PR_GET_FUNCIONALIDADES;
 IF OBJECT_ID('LALENIRO.PR_GET_ROLES') IS NOT NULL
 DROP PROCEDURE LALENIRO.PR_GET_ROLES;
 
+IF OBJECT_ID('LALENIRO.PR_LOGIN') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_LOGIN;
+
+IF OBJECT_ID('LALENIRO.PR_ADD_INTENTO_FALLIDO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ADD_INTENTO_FALLIDO;
+
+IF OBJECT_ID('LALENIRO.PR_DESHABILITAR_USUARIO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_DESHABILITAR_USUARIO;
+
+IF OBJECT_ID('LALENIRO.PR_HABILITAR_USUARIO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_HABILITAR_USUARIO;
+
+IF OBJECT_ID('LALENIRO.PR_GET_ROLES_DE_USUARIO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_GET_ROLES_DE_USUARIO;
+
+IF OBJECT_ID('LALENIRO.PR_CREAR_USUARIO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_CREAR_USUARIO;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_USUARIO_HAS_ROL') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_USUARIO_HAS_ROL;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_USUARIO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_USUARIO;
+
+IF OBJECT_ID('LALENIRO.PR_INSERTAR_DIRECCION') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_INSERTAR_DIRECCION;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_CONTRASEÑA_USUARIO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_CONTRASEÑA_USUARIO;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_DATOS_USUARIO') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_DATOS_USUARIO;
+
+
+
 ------------------------------DROP TRIGGERS ------------------------------
 
 ------------------------------DROP DE TABLAS------------------------------
@@ -290,8 +325,8 @@ go
  
  CREATE TABLE LALENIRO.Usuario(
 
-	Usu_Username nvarchar(255) NOT NULL PRIMARY KEY,
-	Usu_Password nvarchar(255) NULL,
+	Usu_Username nvarchar(255) PRIMARY KEY,
+	Usu_Password nvarchar(255),
 	Usu_Mail nvarchar(255) unique,
 	Usu_Tipo_Documento nvarchar(255) ,
 	Usu_NroDocumento numeric(18, 0),
@@ -299,8 +334,8 @@ go
 	Usu_Nombre nvarchar(255) ,
 	Usu_Apellido nvarchar(255),
 	Usu_Fecha_Nacimiento datetime,
-	Usu_Nacionalidad nvarchar(255),
-	Usu_Pasaporte numeric(18, 0),
+	--Usu_Nacionalidad nvarchar(255),
+	--Usu_Pasaporte numeric(18, 0),
 	Usu_LoginFallidos int DEFAULT 0,
 	Usu_Habilitado BIT DEFAULT 1, --1 ES HABILITADO
 	Direccion_Dir_Codigo numeric(18, 0),
@@ -390,7 +425,7 @@ AS
   @Rol_Codigo numeric(18, 0)
   AS
   BEGIN TRY
-	SELECT Fun_Detalle FROM LALENIRO.Funcionalidad JOIN LALENIRO.Rol_has_Funcionalidad ON (Fun_Codigo = Funcionalidad_Fun_Codigo) JOIN LALENIRO.Rol ON (Rol_Codigo = Rol_Rol_Codigo AND Rol_Codigo = @Rol_Codigo)
+	SELECT Fun_Codigo, Fun_Detalle FROM LALENIRO.Funcionalidad JOIN LALENIRO.Rol_has_Funcionalidad ON (Fun_Codigo = Funcionalidad_Fun_Codigo) JOIN LALENIRO.Rol ON (Rol_Codigo = Rol_Rol_Codigo AND Rol_Codigo = @Rol_Codigo)
 
   END TRY
   BEGIN CATCH
@@ -402,7 +437,7 @@ AS
  CREATE PROCEDURE LALENIRO.PR_GET_FUNCIONALIDADES
   AS
   BEGIN TRY
-	SELECT Fun_Detalle FROM LALENIRO.Funcionalidad 
+	SELECT Fun_Codigo ,Fun_Detalle FROM LALENIRO.Funcionalidad 
 
   END TRY
   BEGIN CATCH
@@ -414,13 +449,241 @@ AS
  CREATE PROCEDURE LALENIRO.PR_GET_ROLES
   AS
   BEGIN TRY
-	SELECT Rol_Descripcion FROM LALENIRO.Rol
+	SELECT Rol_Codigo , Rol_Descripcion FROM LALENIRO.Rol
 
   END TRY
   BEGIN CATCH
     SELECT 'ERROR', ERROR_MESSAGE()
   END CATCH
  GO
+
+------------------------------DIRECCION--------------------------------------------
+
+--INGRESA UN NUEVA DIRECCION
+CREATE PROCEDURE LALENIRO.PR_INSERTAR_DIRECCION
+	@Dir_Ciudad nvarchar(255) ,
+	@Dir_Calle nvarchar(255) ,
+	@Dir_Nro_Calle numeric(18, 0) ,
+	@Dir_Piso numeric(18, 0) ,
+	@Dir_Depto nvarchar(50) ,
+	@Dir_Pais nvarchar(255) ,
+	@Dir_Codigo numeric(18, 0) OUTPUT
+AS
+  BEGIN TRY
+	IF(NOT EXISTS (SELECT Dir_Codigo FROM LALENIRO.Direccion WHERE @Dir_Ciudad = Dir_Ciudad AND @Dir_Calle = Dir_Calle AND @Dir_Nro_Calle = Dir_Nro_Calle AND @Dir_Piso = Dir_Piso AND @Dir_Depto =Dir_Depto AND @Dir_Pais = Dir_Pais ))
+		BEGIN
+	    INSERT INTO LALENIRO.Direccion(Dir_Ciudad, Dir_Calle, Dir_Nro_Calle, Dir_Piso, Dir_Depto, Dir_Pais) VALUES (@Dir_Ciudad, @Dir_Calle, @Dir_Nro_Calle, @Dir_Piso, @Dir_Depto, @Dir_Pais);
+		  SELECT @Dir_Codigo = SCOPE_IDENTITY();
+		END
+	ELSE 
+	SELECT @Dir_Codigo = Dir_Codigo FROM LALENIRO.Direccion WHERE @Dir_Ciudad = Dir_Ciudad AND @Dir_Calle = Dir_Calle AND @Dir_Nro_Calle = Dir_Nro_Calle AND @Dir_Piso = Dir_Piso AND @Dir_Depto =Dir_Depto AND @Dir_Pais = Dir_Pais
+  
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+------------------------------ABM USUARIO------------------------------------------
+--RELACIONA UN ROL CON UN USUARIO
+CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_USUARIO_HAS_ROL
+  @Usu_Username nvarchar(255),
+  @Rol_Codigo numeric(18, 0),
+  @Estado bit 
+  AS
+  BEGIN TRY
+	IF(@Estado = 0)--LO ELIMINO
+		DELETE FROM LALENIRO.Usuario_has_Rol WHERE Rol_Rol_Codigo = @Rol_Codigo AND Usuario_Usu_Username = @Usu_Username
+	ELSE IF(@Estado = 1)--LO CREO  
+		INSERT INTO LALENIRO.Usuario_has_Rol (Usuario_Usu_Username,Rol_Rol_Codigo) VALUES (@Usu_Username, @Rol_Codigo);
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+ --RELACIONA UN HOTEL CON UN USUARIO
+CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_USUARIO
+  @Usu_Username nvarchar(255),
+  @Hot_Codigo numeric(18, 0),
+   @Estado bit 
+  AS
+  BEGIN TRY
+	IF(@Estado = 0)--LO ELIMINO
+		DELETE FROM LALENIRO.Hotel_has_Usuario WHERE Hotel_Hot_Codigo = @Hot_Codigo AND Usuario_Usu_Username = @Usu_Username
+	ELSE IF(@Estado = 1)--LO CREO  
+	INSERT INTO LALENIRO.Hotel_has_Usuario(Usuario_Usu_Username,Hotel_Hot_Codigo) VALUES (@Usu_Username, @Hot_Codigo);
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+--INGRESA UN NUEVO USUARIO
+CREATE PROCEDURE LALENIRO.PR_CREAR_USUARIO
+	@Usu_Username nvarchar(255),
+	@Usu_Password nvarchar(255),
+	@Rol_Codigo_inicial numeric(18, 0),
+	@Usu_Nombre nvarchar(255) ,
+	@Usu_Apellido nvarchar(255),
+	@Usu_Tipo_Documento nvarchar(255) ,
+	@Usu_NroDocumento numeric(18, 0),
+	@Usu_Mail nvarchar(255),
+	@Usu_Telefono numeric(18, 0),
+	@Dir_Codigo numeric(18, 0),
+	@Usu_Fecha_Nacimiento datetime,
+	@Hot_Codigo numeric(18, 0)	
+AS
+  BEGIN TRY
+	--INSERTO USUARIO
+    INSERT INTO LALENIRO.Usuario (Usu_Username, Usu_Password, Usu_Nombre, Usu_Apellido, Usu_Tipo_Documento, Usu_NroDocumento, Usu_Mail, Usu_Telefono, Direccion_Dir_Codigo, Usu_Fecha_Nacimiento)
+		VALUES (@Usu_Username,HashBytes('SHA2_256', @Usu_Password), @Usu_Nombre, @Usu_Apellido, @Usu_Tipo_Documento, @Usu_NroDocumento, @Usu_Mail, @Usu_Telefono, @Dir_Codigo, @Usu_Fecha_Nacimiento);
+	
+	--INSERTO USUARIO_HAS_ROL
+	EXECUTE LALENIRO.PR_ACTUALIZAR_USUARIO_HAS_ROL @Usu_Username,@Rol_Codigo_inicial,1
+
+	--INSERTO HOTEL_HAS_USUARIO
+	EXECUTE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_USUARIO @Usu_Username,@Hot_Codigo,1
+
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+--ACTUALIZA LA CONTRASEÑA DEL USUARIO
+CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_CONTRASEÑA_USUARIO
+	@Usu_Username nvarchar(255),
+	@Usu_Password nvarchar(255),
+	@Usu_Password_NUEVA nvarchar(255)	
+AS
+  BEGIN TRY
+
+	IF (EXISTS(SELECT Usu_Username  FROM USUARIO WHERE Usu_Username = @Usu_Username AND HashBytes('SHA2_256', Usu_Password) =HashBytes('SHA2_256', @Usu_Password) ))
+	UPDATE LALENIRO.Usuario SET  Usu_Password = @Usu_Password_NUEVA WHERE Usu_Username = @Usu_Username 
+
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+--ACTUALIZA UN USUARIO EXISTENTE
+CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_DATOS_USUARIO
+	@Usu_Username nvarchar(255),
+	@Usu_Nombre nvarchar(255) ,
+	@Usu_Apellido nvarchar(255),
+	@Usu_Tipo_Documento nvarchar(255) ,
+	@Usu_NroDocumento numeric(18, 0),
+	@Usu_Mail nvarchar(255),
+	@Usu_Telefono numeric(18, 0),
+	@Dir_Codigo numeric(18, 0),
+	@Usu_Fecha_Nacimiento datetime
+		
+AS
+  BEGIN TRY
+
+	 IF (EXISTS(SELECT Usu_Username  FROM USUARIO WHERE Usu_Username = @Usu_Username ))
+		UPDATE LALENIRO.Usuario 
+		SET @Usu_Nombre=Usu_Nombre, @Usu_Apellido= Usu_Apellido, @Usu_Tipo_Documento= Usu_Tipo_Documento, @Usu_NroDocumento= Usu_NroDocumento,
+			@Usu_Mail= Usu_Mail, @Usu_Telefono= Usu_Telefono, @Dir_Codigo= Direccion_Dir_Codigo, @Usu_Fecha_Nacimiento= Usu_Fecha_Nacimiento
+		WHERE Usu_Username = @Usu_Username 
+		
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+    --DESHABILITA UN USUARIO
+ CREATE PROCEDURE LALENIRO.PR_DESHABILITAR_USUARIO
+ @Usu_Username nvarchar(255)
+  AS
+  BEGIN TRY
+	
+	IF (EXISTS(SELECT Usu_Username  FROM USUARIO WHERE Usu_Username = @Usu_Username ))
+	UPDATE LALENIRO.Usuario SET  Usu_Habilitado = 0 WHERE Usu_Username = @Usu_Username
+	
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+------------------------------Login y seguridad------------------------------------
+
+  --DEVUELVE LOS ROLES DE UN USUARIO
+ CREATE PROCEDURE LALENIRO.PR_GET_ROLES_DE_USUARIO
+  @Usu_Username nvarchar(255)
+  AS
+  BEGIN TRY
+	SELECT Rol_Codigo, Rol_Descripcion FROM LALENIRO.Rol JOIN LALENIRO.Usuario_has_Rol ON (Rol_Codigo = Rol_Rol_Codigo) JOIN LALENIRO.Usuario ON (Usu_Username = Usuario_Usu_Username AND Usu_Username = @Usu_Username)
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+
+     --HABILITAR UN USUARIO
+ CREATE PROCEDURE LALENIRO.PR_HABILITAR_USUARIO
+ @Usu_Username nvarchar(255)
+  AS
+  BEGIN TRY
+	
+	IF (EXISTS(SELECT Usu_Username  FROM USUARIO WHERE Usu_Username = @Usu_Username ))
+	UPDATE LALENIRO.Usuario SET  Usu_Habilitado = 1 WHERE Usu_Username = @Usu_Username
+	
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+    --AUMENTA EN UNO LA CANTIDAD DE INTENTOS FALLIDOS
+ CREATE PROCEDURE LALENIRO.PR_ADD_INTENTO_FALLIDO
+ @Usu_Username nvarchar(255)
+  AS
+  BEGIN TRY
+	
+	UPDATE LALENIRO.Usuario SET  Usu_LoginFallidos = Usu_LoginFallidos + 1 WHERE Usu_Username = @Usu_Username
+	IF (EXISTS(SELECT Usu_Username  FROM USUARIO WHERE Usu_Username = @Usu_Username AND Usu_LoginFallidos = 3 ))
+	EXECUTE PR_DESHABILITAR_USUARIO @Usu_Username
+		
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+   --VERIFICA SI EL LOGIN ES CORRECTO ,SI LO ES, PONE LOGIN FALLIDO EN 0 Y EN ESTADO FIGURA SI ESTA HABILITADO
+ CREATE PROCEDURE LALENIRO.PR_LOGIN
+	@Usu_Username nvarchar(255),
+	@Usu_Password nvarchar(255),
+	@ESTADO BIT = 0 OUTPUT -- 1 ACIVO
+  AS
+  BEGIN TRY
+	IF (EXISTS(SELECT Usu_Username  FROM USUARIO WHERE Usu_Username = @Usu_Username))
+	BEGIN
+
+		IF (EXISTS(SELECT Usu_Username  FROM USUARIO WHERE Usu_Username = @Usu_Username AND Usu_Password = HashBytes('SHA2_256', @Usu_Password) ))
+			BEGIN
+				UPDATE Usuario SET Usu_LoginFallidos = 0 WHERE Usu_Username = @Usu_Username;
+				SELECT @ESTADO = Usu_Habilitado FROM USUARIO WHERE Usu_Username = @Usu_Username
+			END
+		ELSE
+			EXECUTE LALENIRO.PR_ADD_INTENTO_FALLIDO @Usu_Username;
+	END
+	ELSE PRINT 'EL NOMBRE DE USUARIO NO EXISTE'	
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
 
 
 ------------------------------STORE PROCEDURE OTROS------------------------------
