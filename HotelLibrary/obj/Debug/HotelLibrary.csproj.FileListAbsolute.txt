@@ -1,0 +1,6 @@
+C:\Users\NENDLER\GDD2018_LALENIRO\HotelLibrary\bin\Debug\HotelLibrary.dll
+C:\Users\NENDLER\GDD2018_LALENIRO\HotelLibrary\bin\Debug\HotelLibrary.pdb
+C:\Users\NENDLER\GDD2018_LALENIRO\HotelLibrary\obj\Debug\HotelLibrary.Properties.Resources.resources
+C:\Users\NENDLER\GDD2018_LALENIRO\HotelLibrary\obj\Debug\HotelLibrary.csproj.GenerateResource.Cache
+C:\Users\NENDLER\GDD2018_LALENIRO\HotelLibrary\obj\Debug\HotelLibrary.dll
+C:\Users\NENDLER\GDD2018_LALENIRO\HotelLibrary\obj\Debug\HotelLibrary.pdb
