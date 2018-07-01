@@ -64,6 +64,36 @@ DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_CONTRASEÑA_USUARIO;
 IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_DATOS_USUARIO') IS NOT NULL
 DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_DATOS_USUARIO;
 
+IF OBJECT_ID('LALENIRO.PR_INSERTAR_HUESPED') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_INSERTAR_HUESPED;
+
+IF OBJECT_ID('LALENIRO.PR_MODIFICAR_HUESPED') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_MODIFICAR_HUESPED;
+
+IF OBJECT_ID('LALENIRO.PR_DESHABILITAR_HUESPED') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_DESHABILITAR_HUESPED;
+
+IF OBJECT_ID('LALENIRO.BUSCAR_HUESPEDES_HABILITADOS') IS NOT NULL
+DROP PROCEDURE LALENIRO.BUSCAR_HUESPEDES_HABILITADOS;
+
+IF OBJECT_ID('LALENIRO.PR_CREAR_HOTEL') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_CREAR_HOTEL;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_HOTEL') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_HOTEL;
+
+IF OBJECT_ID('LALENIRO.PR_DESHABILITAR_HOTEL') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_DESHABILITAR_HOTEL;
+
+IF OBJECT_ID('LALENIRO.PR_CREAR_HOTEL_HAS_REGIMEN') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_CREAR_HOTEL_HAS_REGIMEN;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_REGIMEN') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_REGIMEN;
+
+IF OBJECT_ID('LALENIRO.LISTAR_HOTELES') IS NOT NULL
+DROP PROCEDURE LALENIRO.LISTAR_HOTELES;
+
 
 
 ------------------------------DROP TRIGGERS ------------------------------
@@ -286,6 +316,7 @@ go
  CREATE TABLE LALENIRO.Hotel_has_Usuario(
 	Usuario_Usu_Username nvarchar(255) NOT NULL,
 	Hotel_Hot_Codigo numeric(18, 0) NOT NULL,
+
 	PRIMARY KEY(Hotel_Hot_Codigo,Usuario_Usu_Username)
 )
  
@@ -311,7 +342,7 @@ go
 	Hues_Fecha_Nacimiento datetime,
 	Hues_Nacionalidad nvarchar(255),
 	Hues_Estado bit DEFAULT 1,
-	
+	Direccion_Dir_Codigo numeric(18, 0),
  )
  go
 
@@ -344,7 +375,7 @@ go
 	go
 
   CREATE TABLE LALENIRO.Rol(
-	Rol_Codigo numeric(18, 0) identity(1,1) primary key,
+	Rol_Codigo numeric(18, 0) primary key,
 	Rol_Descripcion nvarchar(255) UNIQUE,
 	Rol_Estado bit DEFAULT 1, -- 1 ES ACTIVO
 
@@ -685,6 +716,255 @@ GO
  GO
 
 
+------------------------------ABM cliente(HUESPEDES)------------------------------------------
+
+
+--ingresa un nuevo HUESPED
+CREATE PROCEDURE LALENIRO.PR_INSERTAR_HUESPED 
+@Hues_Nombre nvarchar(255),
+@Hues_Apellido nvarchar(255),
+@Hues_NroIdentificacion numeric(18, 0),
+@Hues_TipoIdentificacion nvarchar(255),
+@Hues_Mail nvarchar(255),
+@Hues_Telefono numeric(18, 0),
+@Direccion numeric(18, 0),
+@Hues_Nacionalidad nvarchar(255),
+@Hues_Fecha_Nacimiento datetime
+
+AS
+BEGIN TRY
+
+	IF(NOT EXISTS(SELECT hues_Codigo FROM LALENIRO.Huesped WHERE (Hues_NroIdentificacion= @Hues_NroIdentificacion AND Hues_TipoIdentificacion= @Hues_TipoIdentificacion) OR Hues_Mail = @Hues_Mail )) --ME FIJO SI EXISTE UN CLIENTE CON MISMO MAIL O IDENTIFICACION
+		INSERT INTO LALENIRO.Huesped(Hues_Nombre,Hues_Apellido,Hues_NroIdentificacion,Hues_TipoIdentificacion,Hues_Mail,Hues_Telefono,Direccion_Dir_Codigo,Hues_Nacionalidad,Hues_Fecha_Nacimiento )
+		VALUES(@Hues_Nombre, @Hues_Apellido, @Hues_NroIdentificacion, @Hues_TipoIdentificacion, @Hues_Mail, @Hues_Telefono, @Direccion, @Hues_Nacionalidad, @Hues_Fecha_Nacimiento )
+	ELSE
+		RAISERROR('DATOS NO VALIDOS',1,1)
+	
+END TRY
+BEGIN CATCH
+  SELECT 'ERROR', ERROR_MESSAGE()
+END CATCH
+GO
+
+
+
+
+--actualiza un HUESPED existente
+CREATE PROCEDURE LALENIRO.PR_MODIFICAR_HUESPED 
+@hues_Codigo numeric(18, 0),
+@Hues_Nombre nvarchar(255),
+@Hues_Apellido nvarchar(255),
+@Hues_NroIdentificacion numeric(18, 0),
+@Hues_TipoIdentificacion nvarchar(255),
+@Hues_Mail nvarchar(255),
+@Hues_Telefono numeric(18, 0),
+@Direccion numeric(18, 0),
+@Hues_Nacionalidad nvarchar(255),
+@Hues_Fecha_Nacimiento datetime,
+@Hues_Estado bit
+
+AS
+BEGIN TRY
+
+	IF(NOT EXISTS( SELECT hues_Codigo FROM LALENIRO.Huesped WHERE ((Hues_NroIdentificacion= @Hues_NroIdentificacion AND Hues_TipoIdentificacion= @Hues_TipoIdentificacion) OR Hues_Mail = @Hues_Mail ) AND hues_Codigo != @hues_Codigo))
+	
+			UPDATE LALENIRO.Huesped 
+			SET Hues_Nombre = @Hues_Nombre, Hues_Apellido= @Hues_Apellido, Hues_NroIdentificacion= @Hues_NroIdentificacion, Hues_TipoIdentificacion= @Hues_TipoIdentificacion,
+				Hues_Mail =@Hues_Mail, Hues_Telefono = @Hues_Telefono, Direccion_Dir_Codigo = @Direccion, Hues_Nacionalidad = @Hues_Nacionalidad, Hues_Fecha_Nacimiento =@Hues_Fecha_Nacimiento, Hues_Estado = @Hues_Estado
+		    WHERE hues_Codigo = @hues_Codigo
+
+	ELSE
+		RAISERROR('DATOS NO VALIDOS',1,1)
+
+END TRY
+BEGIN CATCH
+  SELECT 'ERROR', ERROR_MESSAGE()
+END CATCH
+GO
+
+
+    --DESHABILITA UN HUESPED
+ CREATE PROCEDURE LALENIRO.PR_DESHABILITAR_HUESPED
+ @hues_Codigo numeric(18, 0)
+  AS
+  BEGIN TRY
+	
+	IF (EXISTS(SELECT 1 FROM LALENIRO.Huesped WHERE hues_Codigo = @hues_Codigo ))
+	UPDATE LALENIRO.Huesped SET  Hues_Estado = 0 WHERE hues_Codigo = @hues_Codigo 
+	
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+
+
+ CREATE PROCEDURE LALENIRO.BUSCAR_HUESPEDES_HABILITADOS
+ @Hues_Nombre nvarchar(255),
+ @Hues_Apellido nvarchar(255),
+ @Hues_NroIdentificacion numeric(18, 0),
+ @Hues_TipoIdentificacion nvarchar(255),
+ @Hues_Mail nvarchar(255)
+
+AS
+BEGIN TRY
+	SELECT *
+	FROM LALENIRO.Huesped
+	WHERE
+	(@Hues_Nombre = '' OR @Hues_Nombre is null OR lower(Hues_Nombre) LIKE '%' + lower(@Hues_Nombre) + '%') AND  
+	(@Hues_Apellido = '' OR @Hues_Apellido is null OR lower(Hues_Apellido) LIKE '%' + lower(@Hues_Apellido) + '%') AND
+	(@Hues_TipoIdentificacion = '' OR @Hues_TipoIdentificacion is null OR lower(Hues_TipoIdentificacion) LIKE lower(@Hues_TipoIdentificacion) + '%') AND
+	(@Hues_NroIdentificacion = '' OR @Hues_NroIdentificacion is null OR Hues_NroIdentificacion = @Hues_NroIdentificacion) AND 
+	(@Hues_Mail = '' OR @Hues_Mail is null OR lower(Hues_Mail) LIKE '%' + lower(@Hues_Mail) + '%') AND Hues_Estado = 1
+END TRY
+BEGIN CATCH
+  SELECT 'ERROR', ERROR_MESSAGE()
+END CATCH
+GO
+
+------------------------------ABM HOTEL------------------------------------------
+     
+
+--INGRESA UN NUEVO HOTEL
+CREATE PROCEDURE LALENIRO.PR_CREAR_HOTEL
+	@Hot_Nombre nvarchar (255) ,
+	@Hot_Mail nvarchar(255) ,
+	@Hot_telefono numeric (18, 0) ,
+	@Direccion_Codigo numeric(18, 0) ,
+	@Hot_CantEstrellas numeric(18, 0) ,
+	@Hot_Fecha_Creacion datetime,
+	@Usu_Username nvarchar(255)
+
+AS
+  BEGIN TRY
+  
+	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Hotel WHERE Hot_Nombre = @Hot_Nombre AND Hot_Mail = @Hot_Mail AND Hot_Fecha_Creacion = @Hot_Fecha_Creacion))
+	BEGIN
+    INSERT INTO LALENIRO.Hotel(Hot_Nombre,Hot_Mail,Hot_telefono,Direccion_Dir_Codigo, Hot_CantEstrellas, Hot_Fecha_Creacion )
+		VALUES (@Hot_Nombre,@Hot_Mail, @Hot_telefono, @Direccion_Codigo, @Hot_CantEstrellas, @Hot_Fecha_Creacion);
+
+	EXECUTE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_USUARIO @Usu_Username,@@IDENTITY,1;
+	END
+
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+--ACTUALIZA UN  HOTEL
+CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_HOTEL
+
+	@hot_Codigo numeric(18, 0),
+	@Hot_Nombre nvarchar (255) ,
+	@Hot_Mail nvarchar(255) ,
+	@Hot_telefono numeric (18, 0) ,
+	@Direccion_Codigo numeric(18, 0) ,
+	@Hot_CantEstrellas numeric(18, 0) ,
+	@Hot_Fecha_Creacion datetime,
+	@Usu_Username nvarchar(255)
+
+AS
+  BEGIN TRY
+ 
+	DECLARE @ADMIN_ANTERIOR nvarchar(255)
+  
+	IF(EXISTS (SELECT 1 FROM LALENIRO.Hotel WHERE @hot_Codigo = Hot_Codigo))
+	BEGIN
+	SELECT top 1 @ADMIN_ANTERIOR = Usuario_Usu_Username FROM Hotel_has_Usuario WHERE Hotel_Hot_Codigo = @hot_Codigo AND Usuario_Usu_Username in (select u.Usuario_Usu_Username from Usuario_has_Rol u where u.Rol_Rol_Codigo = 1 or u.Rol_Rol_Codigo = 2)
+
+	UPDATE LALENIRO.Hotel 
+	SET Hot_Nombre = @Hot_Nombre, Hot_Mail = @Hot_Mail, Hot_telefono =@Hot_telefono, Direccion_Dir_Codigo =@Direccion_Codigo,Hot_CantEstrellas =@Hot_CantEstrellas, Hot_Fecha_Creacion =@Hot_Fecha_Creacion
+	WHERE Hot_Codigo = @hot_Codigo
+	    
+	EXECUTE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_USUARIO @ADMIN_ANTERIOR ,@hot_Codigo,0;
+	EXECUTE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_USUARIO @Usu_Username,@hot_Codigo,1;
+	END
+
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+    --DESHABILITA UN hotel
+ CREATE PROCEDURE LALENIRO.PR_DESHABILITAR_HOTEL
+ @hot_Codigo numeric(18, 0),
+ @Baja_Fecha_Inicio datetime,
+ @Baja_Fecha_Fin datetime,
+ @Baja_Desc nvarchar(255)
+  AS
+  BEGIN TRY
+	
+	IF (EXISTS(SELECT 1 FROM LALENIRO.Hotel WHERE Hot_Codigo = @hot_Codigo and Hot_Estado = 1 ))
+	BEGIN
+	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Reserva WHERE ISNULL(Res_Fecha_Cancelacion,Res_Fecha_Hasta) >= CONVERT(datetime,@Baja_Fecha_Inicio) AND Res_Fecha_Desde <= CONVERT(datetime,@Baja_Fecha_Fin) AND Hotel_Hot_Codigo =@hot_Codigo))--LO DA DEBAJA SI NO HAY RESERVAS HECHAS EN ESE PERIODO
+		BEGIN
+		UPDATE LALENIRO.Hotel SET  Hot_Estado = 0 WHERE Hot_Codigo = @hot_Codigo 
+		INSERT INTO LALENIRO.BajasPorMantenimiento (Bajas_Fecha_Inicio,Bajas_Fecha_Fin,Bajas_Descripcion,Hotel_Hot_Codigo)
+		values (CONVERT(datetime,@Baja_Fecha_Inicio),CONVERT(datetime,@Baja_Fecha_Fin),@Baja_Desc,@hot_Codigo)
+		END
+	END
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+
+
+ --CREA UNA RELACION DE HOTEL HAS REGIMEN
+ CREATE PROCEDURE LALENIRO.PR_CREAR_HOTEL_HAS_REGIMEN
+  @hot_Codigo numeric(18, 0),
+  @Reg_Codigo numeric(18, 0)
+  AS
+  BEGIN TRY
+	INSERT INTO LALENIRO.Hotel_has_Regimen (Hotel_hot_Codigo,Regimen_Reg_Codigo) VALUES (@hot_Codigo,@Reg_Codigo)
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+  --ELIMINA UNA RELACION DE HOTEL HAS REGIMEN
+ CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_REGIMEN
+  @hot_Codigo numeric(18, 0),
+  @Reg_Codigo numeric(18, 0),
+  @Fecha_ACTUAL datetime
+  AS
+  BEGIN TRY
+	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Reserva WHERE ISNULL(Res_Fecha_Cancelacion,Res_Fecha_Hasta) > CONVERT(datetime,@Fecha_ACTUAL) AND Hotel_Hot_Codigo =@hot_Codigo AND Regimen_Reg_Codigo = @Reg_Codigo ))--SE FIJA SI HAY RESERVAS CON ESE REGIMEN EN ESA FECHA
+		DELETE FROM LALENIRO.Hotel_has_Regimen WHERE Hotel_hot_Codigo = @hot_Codigo AND Regimen_Reg_Codigo = @Reg_Codigo
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+ 
+ CREATE PROCEDURE LALENIRO.LISTAR_HOTELES
+ @Hot_Nombre nvarchar (255) ,
+ @Hot_CantEstrellas numeric(18, 0) ,
+ @Dir_Ciudad nvarchar(255) ,
+ @Dir_Pais nvarchar(255) 
+AS
+BEGIN TRY
+	SELECT Hot_Codigo,Hot_Nombre, Hot_Mail,Hot_telefono,Dir_Calle,Dir_Nro_Calle, Hot_CantEstrellas,Dir_Ciudad,Dir_Pais, Hot_Fecha_Creacion
+	FROM LALENIRO.HOTEL JOIN LALENIRO.Direccion ON (Dir_Codigo = Direccion_Dir_Codigo)
+	WHERE
+	(@Hot_Nombre = '' OR @Hot_Nombre is null OR lower(Hot_Nombre) LIKE '%' + lower(@Hot_Nombre) + '%') AND  
+	(@Dir_Ciudad = '' OR @Dir_Ciudad is null OR lower(Dir_Ciudad) LIKE '%' + lower(@Dir_Ciudad) + '%') AND
+	(@Dir_Pais = '' OR @Dir_Pais is null OR lower(Dir_Pais) LIKE lower(@Dir_Pais) + '%') AND
+	(@Hot_CantEstrellas = '' OR @Hot_CantEstrellas is null OR Hot_CantEstrellas = @Hot_CantEstrellas) AND Hot_Estado =1
+END TRY
+BEGIN CATCH
+  SELECT 'ERROR', ERROR_MESSAGE()
+END CATCH
+GO
+
 
 ------------------------------STORE PROCEDURE OTROS------------------------------
 
@@ -709,10 +989,10 @@ AS
 BEGIN
 	
 	-- INSERT DE ROL 
-	INSERT INTO LALENIRO.Rol (Rol_Descripcion) VALUES('Administrador General')
-	INSERT INTO LALENIRO.Rol (Rol_Descripcion) VALUES('Administrador')
-	INSERT INTO LALENIRO.Rol (Rol_Descripcion) VALUES('Recepcionista')
-	INSERT INTO LALENIRO.Rol (Rol_Descripcion) VALUES('Guest')
+	INSERT INTO LALENIRO.Rol (Rol_Codigo,Rol_Descripcion) VALUES(1,'Administrador General')
+	INSERT INTO LALENIRO.Rol (Rol_Codigo,Rol_Descripcion) VALUES(2,'Administrador')
+	INSERT INTO LALENIRO.Rol (Rol_Codigo,Rol_Descripcion) VALUES(3,'Recepcionista')
+	INSERT INTO LALENIRO.Rol (Rol_Codigo,Rol_Descripcion) VALUES(4,'Guest')
 	
 	-- INSERT DE FUNCIONALIDAD 
 	INSERT INTO LALENIRO.Funcionalidad(Fun_Detalle) VALUES('ABM ROL')
@@ -903,6 +1183,8 @@ ALTER TABLE [LALENIRO].[Usuario_has_Rol] ADD FOREIGN KEY ([Rol_Rol_Codigo]) REFE
 ALTER TABLE [LALENIRO].[Usuario_has_Rol] ADD FOREIGN KEY ([Usuario_Usu_Username]) REFERENCES [LALENIRO].[Usuario]
 
 ALTER TABLE [LALENIRO].[Usuario] ADD FOREIGN KEY ([Direccion_Dir_Codigo]) REFERENCES [LALENIRO].[Direccion]
+
+ALTER TABLE [LALENIRO].[Huesped] ADD FOREIGN KEY ([Direccion_Dir_Codigo]) REFERENCES [LALENIRO].[Direccion]
 
 ALTER TABLE [LALENIRO].[Hotel_has_Usuario] ADD FOREIGN KEY ([Hotel_Hot_Codigo]) REFERENCES [LALENIRO].[Hotel]
 ALTER TABLE [LALENIRO].[Hotel_has_Usuario] ADD FOREIGN KEY ([Usuario_Usu_Username]) REFERENCES [LALENIRO].[Usuario]
