@@ -94,6 +94,15 @@ DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_HOTEL_HAS_REGIMEN;
 IF OBJECT_ID('LALENIRO.PR_LISTAR_HOTELES_HABILITADOS') IS NOT NULL
 DROP PROCEDURE LALENIRO.PR_LISTAR_HOTELES_HABILITADOS;
 
+IF OBJECT_ID('LALENIRO.PR_CREAR_HABITACION') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_CREAR_HABITACION;
+
+IF OBJECT_ID('LALENIRO.PR_ACTUALIZAR_HABITACION') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_ACTUALIZAR_HABITACION;
+
+IF OBJECT_ID('LALENIRO.PR_MODIFICAR_ESTADO_HABITACION') IS NOT NULL
+DROP PROCEDURE LALENIRO.PR_MODIFICAR_ESTADO_HABITACION;
+
 
 
 ------------------------------DROP TRIGGERS ------------------------------
@@ -292,6 +301,7 @@ go
 	Hab_Numero numeric(18, 0) NOT NULL,
 	Hab_Piso numeric(18, 0) ,
 	Hab_vista nvarchar(50) ,
+	Hab_Descripcion nvarchar(255),
 	Hotel_Hot_Codigo numeric(18, 0) NOT NULL ,
 	Tipo_Habitacion_Codigo numeric(18, 0) NOT NULL,
 	Hab_Estado bit DEFAULT 1,
@@ -901,11 +911,11 @@ GO
 	
 	IF (EXISTS(SELECT 1 FROM LALENIRO.Hotel WHERE Hot_Codigo = @hot_Codigo and Hot_Estado = 1 ))
 	BEGIN
-	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Reserva WHERE ISNULL(Res_Fecha_Cancelacion,Res_Fecha_Hasta) >= CONVERT(datetime,@Baja_Fecha_Inicio) AND Res_Fecha_Desde <= CONVERT(datetime,@Baja_Fecha_Fin) AND Hotel_Hot_Codigo =@hot_Codigo))--LO DA DEBAJA SI NO HAY RESERVAS HECHAS EN ESE PERIODO
+	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Reserva WHERE ISNULL(Res_Fecha_Cancelacion,Res_Fecha_Hasta) >= CONVERT(datetime,@Baja_Fecha_Inicio,121) AND Res_Fecha_Desde <= CONVERT(datetime,@Baja_Fecha_Fin,121) AND Hotel_Hot_Codigo =@hot_Codigo))--LO DA DEBAJA SI NO HAY RESERVAS HECHAS EN ESE PERIODO
 		BEGIN
 		UPDATE LALENIRO.Hotel SET  Hot_Estado = 0 WHERE Hot_Codigo = @hot_Codigo 
 		INSERT INTO LALENIRO.BajasPorMantenimiento (Bajas_Fecha_Inicio,Bajas_Fecha_Fin,Bajas_Descripcion,Hotel_Hot_Codigo)
-		values (CONVERT(datetime,@Baja_Fecha_Inicio),CONVERT(datetime,@Baja_Fecha_Fin),@Baja_Desc,@hot_Codigo)
+		values (CONVERT(datetime,@Baja_Fecha_Inicio,121),CONVERT(datetime,@Baja_Fecha_Fin,121),@Baja_Desc,@hot_Codigo)
 		END
 	END
   END TRY
@@ -936,7 +946,7 @@ GO
   @Fecha_ACTUAL datetime
   AS
   BEGIN TRY
-	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Reserva WHERE ISNULL(Res_Fecha_Cancelacion,Res_Fecha_Hasta) > CONVERT(datetime,@Fecha_ACTUAL) AND Hotel_Hot_Codigo =@hot_Codigo AND Regimen_Reg_Codigo = @Reg_Codigo ))--SE FIJA SI HAY RESERVAS CON ESE REGIMEN EN ESA FECHA
+	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Reserva WHERE ISNULL(Res_Fecha_Cancelacion,Res_Fecha_Hasta) > CONVERT(datetime,@Fecha_ACTUAL,121) AND Hotel_Hot_Codigo =@hot_Codigo AND Regimen_Reg_Codigo = @Reg_Codigo ))--SE FIJA SI HAY RESERVAS CON ESE REGIMEN EN ESA FECHA
 		DELETE FROM LALENIRO.Hotel_has_Regimen WHERE Hotel_hot_Codigo = @hot_Codigo AND Regimen_Reg_Codigo = @Reg_Codigo
   END TRY
   BEGIN CATCH
@@ -964,6 +974,90 @@ BEGIN CATCH
   SELECT 'ERROR', ERROR_MESSAGE()
 END CATCH
 GO
+
+------------------------------ABM Habitacion------------------------------------
+
+ 
+--INGRESA UN NUEVA HABITACION
+CREATE PROCEDURE LALENIRO.PR_CREAR_HABITACION
+	@Hab_Numero numeric(18, 0) ,
+	@Hab_Piso numeric(18, 0) ,
+	@Hab_vista nvarchar(50) ,
+	@Tipo_Habitacion_Codigo numeric(18, 0) ,
+	@Hab_Descripcion nvarchar(255),
+	@Hot_Codigo numeric(18, 0)
+	
+
+AS
+  BEGIN TRY
+  
+	IF(NOT EXISTS (SELECT 1 FROM LALENIRO.Habitacion join LALENIRO.Hotel on (Hotel_Hot_Codigo = Hot_Codigo) WHERE Hab_Numero = @Hab_Numero AND Hotel_Hot_Codigo = @Hot_Codigo))
+	BEGIN
+    INSERT INTO LALENIRO.Habitacion(Hab_Numero,Hab_Piso,Hab_vista,Tipo_Habitacion_Codigo,hab_Descripcion,Hotel_Hot_Codigo)
+		VALUES (@Hab_Numero,@Hab_Piso,@Hab_vista,@Tipo_Habitacion_Codigo,@Hab_Descripcion,@Hot_Codigo);
+
+	END
+
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+--ACTUALIZA UNA  HABITACION
+CREATE PROCEDURE LALENIRO.PR_ACTUALIZAR_HABITACION
+	@Hab_Numero numeric(18, 0) ,
+	@Hab_Piso numeric(18, 0) ,
+	@Hab_vista nvarchar(50) ,
+	@Hab_Descripcion nvarchar(255),
+	@Hab_Numero_NUEVO numeric(18, 0) ,
+	@Hot_Codigo numeric(18, 0)
+	
+
+AS
+  BEGIN TRY
+ 
+	IF(EXISTS (SELECT 1 FROM LALENIRO.Habitacion WHERE @hot_Codigo = Hotel_Hot_Codigo AND Hab_Numero = @Hab_Numero))
+	BEGIN
+	
+	UPDATE LALENIRO.Habitacion 
+	SET Hab_Numero = @Hab_Numero_NUEVO, Hab_Piso = @Hab_Piso, Hab_vista =@Hab_vista, Hab_Descripcion =@Hab_Descripcion,Hotel_Hot_Codigo =@Hot_Codigo
+	WHERE Hotel_Hot_Codigo = @hot_Codigo AND Hab_Numero = @Hab_Numero
+	    
+	
+	END
+
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+GO
+
+
+    --DESHABILITA O HABILITA UNA HABITACION
+ CREATE PROCEDURE LALENIRO.PR_MODIFICAR_ESTADO_HABITACION
+ 	@Hab_Numero numeric(18, 0) ,
+	@Hot_Codigo numeric(18, 0),
+	@Hab_Estado bit -- SI ES 0 LO DESHABILITA Y 1 LO HABILITA
+	
+  AS
+  BEGIN TRY
+	
+	IF(EXISTS (SELECT 1 FROM LALENIRO.Habitacion WHERE @hot_Codigo = Hotel_Hot_Codigo AND Hab_Numero = @Hab_Numero))
+	BEGIN
+
+		UPDATE LALENIRO.Habitacion SET Hab_Estado = @Hab_Estado WHERE @hot_Codigo = Hotel_Hot_Codigo AND Hab_Numero = @Hab_Numero
+		
+	END
+  END TRY
+  BEGIN CATCH
+    SELECT 'ERROR', ERROR_MESSAGE()
+  END CATCH
+ GO
+
+
+
 
 
 ------------------------------STORE PROCEDURE OTROS------------------------------
@@ -1106,15 +1200,15 @@ BEGIN
 		
 		/*insert HUESPED */
 		INSERT into LALENIRO.Huesped(Hues_NroIdentificacion,Hues_TipoIdentificacion,Hues_Nombre,Hues_Apellido,Hues_Mail,Hues_Fecha_Nacimiento, Hues_Nacionalidad)
-		SELECT distinct Cliente_Pasaporte_Nro,'Pasaporte', Cliente_Nombre,Cliente_Apellido,Cliente_Mail,CONVERT (datetime, Cliente_Fecha_Nac),Cliente_Nacionalidad
+		SELECT distinct Cliente_Pasaporte_Nro,'Pasaporte', Cliente_Nombre,Cliente_Apellido,Cliente_Mail,CONVERT (datetime, Cliente_Fecha_Nac,121),Cliente_Nacionalidad
 		FROM  gd_esquema.Maestra
 		EXECUTE LALENIRO.PR_REFACTORIZAR_HUESPED --DESHABILITA REPETIDOS
 
 			/*insert RESERVA */
 
 		INSERT INTO LALENIRO.Reserva(Res_Codigo,Res_Fecha_Desde,Res_Fecha_Hasta,Res_Cant_Noches,Hotel_Hot_Codigo,Regimen_Reg_Codigo) 
-		SELECT DISTINCT Reserva_Codigo,CONVERT(datetime,Reserva_Fecha_Inicio),
-				CONVERT(datetime,DATEADD(DAY,Reserva_Cant_Noches, Reserva_Fecha_Inicio)),
+		SELECT DISTINCT Reserva_Codigo,CONVERT(datetime,Reserva_Fecha_Inicio,121),
+				CONVERT(datetime,DATEADD(DAY,Reserva_Cant_Noches, Reserva_Fecha_Inicio),121),
 				Reserva_Cant_Noches, H.Hot_Codigo, R.Reg_Codigo
 		FROM gd_esquema.Maestra, LALENIRO.Hotel H JOIN LALENIRO.Direccion on (Direccion_Dir_Codigo = Dir_Codigo), LALENIRO.Regimen R
 		WHERE (Dir_Calle = Hotel_Calle and Dir_Ciudad = Hotel_Ciudad and Dir_Nro_Calle = Hotel_Nro_Calle) and R.Reg_Descripcion = Regimen_Descripcion AND R.Reg_PrecioBasePorPersona = Regimen_Precio
@@ -1124,8 +1218,8 @@ BEGIN
 			/*insert ESTADIA */
 
 		INSERT INTO LALENIRO.Estadia(Est_Codigo,Est_Cant_Noches,Est_Fecha_CheckIn,Est_Fecha_CheckOut) 
-		SELECT DISTINCT Reserva_Codigo, Estadia_Cant_Noches,CONVERT(datetime,Estadia_Fecha_Inicio),
-						CONVERT(datetime,DATEADD(DAY,Estadia_Cant_Noches, Estadia_Fecha_Inicio))
+		SELECT DISTINCT Reserva_Codigo, Estadia_Cant_Noches,CONVERT(datetime,Estadia_Fecha_Inicio,121),
+						CONVERT(datetime,DATEADD(DAY,Estadia_Cant_Noches, Estadia_Fecha_Inicio),121)
 		FROM gd_esquema.Maestra where Estadia_Cant_Noches is not null and Factura_Total is null 
 		
 		--SELECT* FROM LALENIRO.Estadia
@@ -1133,7 +1227,7 @@ BEGIN
 			/*insert factura */
 
 		INSERT INTO LALENIRO.Factura (Fac_Nro, Fac_Fecha,Fact_Total, Fact_Precio_Estadia, Estadia_Est_Codigo)
-		SELECT Factura_Nro,CONVERT(datetime,Factura_Fecha),Factura_Total,Item_Factura_Cantidad,Reserva_Codigo
+		SELECT Factura_Nro,CONVERT(datetime,Factura_Fecha,121),Factura_Total,Item_Factura_Cantidad,Reserva_Codigo
 		from gd_esquema.Maestra where Consumible_Codigo is null and Factura_Nro is not null
 
 		
