@@ -917,12 +917,15 @@ GO
 		INSERT INTO LALENIRO.BajasPorMantenimiento (Bajas_Fecha_Inicio,Bajas_Fecha_Fin,Bajas_Descripcion,Hotel_Hot_Codigo)
 		values (CONVERT(datetime,@Baja_Fecha_Inicio,121),CONVERT(datetime,@Baja_Fecha_Fin,121),@Baja_Desc,@hot_Codigo)
 		END
+	ELSE
+		RAISERROR('ERROR EXISTEN RESERVAS',1,1)
 	END
   END TRY
   BEGIN CATCH
     SELECT 'ERROR', ERROR_MESSAGE()
   END CATCH
  GO
+
 
 
 
